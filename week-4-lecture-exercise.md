@@ -100,7 +100,7 @@
         - 2) are not saved/restored by other parts of the handler*(*) or the functions it calls directly or indirectly
     - Transition to High-level language
 
-![屏幕截图 2022-05-05 151740.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/0e0e5935-ec3b-4103-a4e4-4744e83c6e2e/屏幕截图_2022-05-05_151740.png)
+![L401.png](https://github.com/yaoxin1995/OSC_NOTE/blob/week-4/image/L401.png)
 
 - Volatile and Non-volatile Register
     - non-volatile Register: callee-saved register
@@ -119,7 +119,7 @@
 - the problem should be noticed by modifying state:
     - not all simple instructions are atomic, it depends on CPU type, compiler, code optimizations.
     
-    ![屏幕截图 2022-05-05 162435.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/8a6815f0-fbfe-49ea-b539-2315623ff7f7/屏幕截图_2022-05-05_162435.png)
+    ![L402.png](https://github.com/yaoxin1995/OSC_NOTE/blob/week-4/image/L402.png)
     
     - **The memory of buffer is limited**, if input is not handled/consumed fast enough, the buffer can fill up. The interrupt handler routine cannot store further input there. This input is lost.
     - **Buffer data structure can “break”**
@@ -133,7 +133,7 @@
 - “Hard” Synchronization
     - disable interrupt →avoid race condition
     
-    ![屏幕截图 2022-05-05 165302.png](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/499a6a9b-aabc-40c4-a7c7-05fcc11bff4c/屏幕截图_2022-05-05_165302.png)
+    ![L403.png](https://github.com/yaoxin1995/OSC_NOTE/blob/week-4/image/L403.png)
     
     - problem
         - Hazard of losing interrupt requests
