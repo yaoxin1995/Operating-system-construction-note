@@ -184,9 +184,9 @@
 
 - Tips
     - Never call enter from the epilogue (double request)
-    - Basic rule (see above) also holds for the first thread activation(!)
-        - Kickoff function is expcected to be called with gaurd locked. so before another thread is running we need to make sure to release the guard lock.
-        - similar in main() : before call scheduler.scheduler() → make sure guard is locked  before schedule is running. cuz this will run the first application and release the lock
+    - Basic rule (see above) also holds for the first thread activation(!)  
+        - in main : schedule() doesn’t  have secure to be protected. so before we activate the first thread we need to use a guard lock
+        - kickoff is not directly called by any method, it actually was jumped in. so kickoff function is expcected to be called with gaurd locked.  before this thread is running we need to make sure to release the guard lock.
         - **summary** : every require needs some matching release.
     - 
 
