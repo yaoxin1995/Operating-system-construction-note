@@ -1,0 +1,274 @@
+1. Please describe the compilation process
+    - 4 step of compilation
+    - 2 type of linking
+    - advantage and disadvantage of 2 type of linking
+2.  **Why hello world can’t run on bare metal?**
+    
+    No
+    
+    - No linker to load the dynamic lib
+    - No system call support to write “hello” to screen
+    - Need OS to set up environment (address space, stack, register file etc)
+3. Please describe the compilation process
+    - CPU jumps to a fix address where the BIOS code resides
+    - BIOS does basic initialization (activating the video, PCI bus initializtion, etc)
+    - BIOS find the boot median and  loads the first 512-byte boot sector containing the bootloader, and jumps to boot loader
+    - bootloader
+        - Define hardware/software state
+            - Set up registers to switches the processor from real mode to *32-bit protected mode*
+                - Real Mode
+                    - only one megabyte memory, 20 bit
+                    - use 2 16 bit register to do memory addressing (selector:offset)
+                    - physical address is: `16 ∗ selector + offset` (shift the selector to left for 4 bit then add it to offset)
+                    - Selector values is be stored in segment registers
+                    
+                    Con:
+                    
+                    - **A single selector value can only reference 64K of memory. if a program has more than 64K. The program must be split up into sections (called
+                    segments) less than 64K in size**. When execution moves from one segment to another, the value of CS must be changed.
+                    - **Each byte in memory does not have a unique segmented address.**
+                - Protect mode
+                    
+                    Protected mode uses a technique called virtual memory
+                    
+                    1. 16-bit Protected Mode
+                        - segments are moved between memory and disk as needed
+                            
+                            When a segment is returned to memory from disk, it is very likely that it will be put into a different area of memory that it was in before being moved to disk. All of this is done transparently by the operating system. The program does not have to be written differently for virtual memory to work.
+                            
+                        - each segment is assigned an entry in a descriptor table
+                            
+                            This entry has all the information that the system needs to know
+                            about the segment. This information includes: is it currently in memory;
+                            if in memory, where is it; access permissions (e.g., read-only). The index
+                            of the entry of the segment is the selector value that is stored in segment
+                            registers
+                            
+                        - Con: segment sizes are still limited to at most 64K, because the offset are still 16bit long
+                    2. 32-bit Protected Mode
+                        
+                        Two major differences between 386 32-bit and 286 16-bit protected modes:
+                        
+                        - Offsets are expanded to be 32-bits. This allows an offset to range up
+                        to 4 billion. Thus, segments can have sizes up to 4 gigabytes.
+                        - Segments can be divided into smaller 4K-sized units called pages. The
+                        virtual memory system works with pages now instead of segments.
+                        This means that only parts of segment may be in memory at any one
+                        time.
+            - Set up the protected-mode data segment registers, etc.
+        - Load the kernel/system
+        - Jump into loaded system
+        
+        Q: What is real mode and what is protect mode?
+        
+        - Different mechanism for address translation
+            - Real Mode
+                - Address is 20 bit long
+                - Use selector + offset(16bit) register to translate the address
+                - physical address is `16 ∗ selector + offset`
+            - Protection mode:
+                - Address is 32 bit long
+                - Use descriptor table + paging for memory addressing
+                - Selector contain the index of an *entry* inside a *descriptor table, the entry has the start address of the segment. start address + offset address = linear address, if paging is enabled, linear address need go through the page table to be translated to physical address*
+        - add ****Privilege levels in protect mode****
+4. What kind of debug tool are you use? what techs are behind those tools?
+    1. debug tool
+        - Printf
+        - Debugger
+            - Breakpoints: trigger when reaching a particular machine instruction
+            - Watchpoints: trigger when a particular data element is accessed
+            - Bug-hunting might take longer when using a debugger
+        - Emulator
+        - Core dump
+    - techs
+        - INT 3
+            - triggers a “breakpoint interrupt
+            - Need modify the code to add INT 4
+        - debug flags in status register
+            - used for implementing single-stepping in the debugger
+        - debugger registers
+            - No code modification necessary → set break point in ROM
+            - Efficient watchpoints only possible through this mechanism
+            - **The registers are protected in supervisor mode, how can the user space application use it to do debugging?**
+                - Use `ptrace` system call. With `ptrace` system call one process(tracer) can trace/manipulate other processes (tracee)
+5. Remote debugging?
+    1. Need a lin
+6. How to call c function from cpp? How to call cpp function from c?
+    
+    extern c
+    
+7. What kind of Variables may place on heap, stack, data segment and BSS segment respectively?
+    - stack contain local variable
+    - data segment contain global initialized variable
+    - BSS segment contain global uninitialized variables (zerod)
+    - Heap contain dynamic allocated variables (malloc)
+8. Operator Overloading:
+9. Virtual function
+10. References, difference btw. pointer and reference
+    
+    A pointer is a variable that holds the memory address of another variable
+    
+    A reference variable is an alias, that is, another name for an already existing variable. A reference, like a pointer, is also implemented by storing the address of an object.
+    
+    - A pointer can be assigned NULL directly, whereas a reference cannot be
+    - Once a reference is bind to a object, you can’t change it. But for pointer, you can change it to pointer to another object.
+
+
+1. What is interrupt, why you need it?
+2. Characteristic, Problem and solutions?
+    - Prioritization
+        - 2 interrupt comes in at same time, which one first?
+        - OS /PIC define interrupt priority
+    - Lost Interrupts
+        - Interrupt comes and lost while CPU is handling an interrupt
+        - Interrupt handler should be short
+        - Interrupt shouldn’t be disabled longer than necessary
+    - Interrupt Dispatch
+        - How to find the interrupt handler?
+        - IDT
+    - Saving State
+        - After interrupt, We should go back to interrupted app, how?
+        - CPU save ret IP and Status register
+        - Wrapper save valotile register
+    - Multiprocessor Systems
+        - Multiple CPUs exist, which one should interrupt be send?
+        - APIC
+3. What is Spurious interrupt?
+    - Interrupt comes in, but can’t find the source (which device trigger the interrupt)
+    - OS should consider this situation, when this happens, simply return
+4. Interrupt storm?
+    - Too many interrupt happen, cpu can’t do anything other than handler the interrupt
+    - OS should be able to detect the interrupt source and  Deactivate the device
+
+6. What is APIC?
+
+- Design for multiprocessor system
+- I/O APIC (for communication with Devices) and Local APIC for each CPU
+    - I/O APIC  has a redirection table, which define how to forward interrupt to local PIC
+- APIC  support multiple mechanism for Interrupt delivery
+    - fixed(forward certain interrupt to fixed CPU)
+    - groups(forward certain interrupt to a group of CPUs)
+    - lowest task priority(forward a interrupt to  CPU with the lowest task priority)
+- local PIC
+    - has 2 interrupt line
+    - has buildin timer
+    - Local APIC expects explicit EOI
+- I/O APIC
+    - Only has 24 interrupt line → interrupt sharing
+
+
+1. Deference between Interrupt and trap?  Please give me 2 type of trap?
+    - Trap triggered by an instruction < - >Interrupt triggered by external device
+        - Synchronous  < - > Asynchronous to program execution
+        - predictable, reproducible < - > not predictable, reproducible
+        - can’t be suppressed < - > can be supressed
+        - Restart or abort   < - >  Resume
+    - system calls (int 0x80 or syscall / sysenter)
+    - Undefined result (e.g. division by 0)
+    - Invalid instruction (e.g. programming error)
+2. 5 assumption for interrupt handling, the interrupt properties? 
+    1. **The CPU automatically starts the handler routine. (IDT)**
+    2. **Interrupt handling takes place in supervisor mode. (why)**
+    3. **The interrupted program can be resumed. (how)**
+    4. **Machine instructions are atomic. (Why? How?)**
+    5. **Interrupt handling can be disabled/suppressed (How)**
+        1. **disabled: CLI, PIC**
+        2. Automatic suppression **(why, how, 3 options)**
+            - suppresses  across the board all interrupts (very restrictive)
+            - suppresses  interrupts with lower or same priority (less restrictive)
+            - suppresses interrupts that are currently being handled, example：
+3. State save, why, how (partial and total), advantage and disadvantage
+4. Volatile and Non-Volatile Registers
+5. **Workflow of Hardware IRQ with PIC**
+6. What is **IDT**
+7. How does OOSTUBE setup interrupt and handle incoming interrupt?
+    1. At compile time, set up IDT by store  offset to first interrupt handler to each entry where contain the address of interrupt handler n, because we don’t know the address of first interrupt handler yet
+    2. At runtime (during system initialization), go through the IDT again, and add the address of first interrupt handler to each entry
+    3. Interrupt handling
+        - PIC signal the CPU there is a interrupt
+        - CPU save the interrupted program state
+        - CPU accept the req and pick up interrupt number on data bus
+        - CPU find the handler func pointer in IDT, and jumps to the func (wrapper)
+        - wrapper save volentile register and jumps to guardien
+        - guardien call prelogue then relay
+        - relay call epilogue if kernel lock is free, otherwise enqueue the epilogue
+        - wrapper  restore the volentile register and iret restore the status register and IP
+
+
+1. Why ensuring consistency between an application control flow (A) and an interrupt handler (IH) works differently than between processes?
+    - Relationship between A and IH is asymmetric
+    - Synchronization is one-sided
+2. What is Control-Flow Level Model
+3. For accesses from higher/lower levels, we must explicitly maintain consistency, How?
+4. Compare Nonblocking /hard Synchronization, and epilogue model, pro and cons
+    1. What is Nonblocking /hard Synchronization, and epilogue model
+    2. pro and cons
+    3. Assessment
+5. Epilogue model: 
+    1. New control flow level model
+    2. IH is divided into prologue and epilogue (what is prologue and epilogue)
+    3. When do we have to process pending epilogues? 
+    4. Two implementation variants
+    5. Where are the padding epilogues stored?
+    6. Assessment
+
+1. Difference betw. register and memory?
+2. **big / little endian?**
+    
+     big: **most significant** byte → lowest address
+    
+     little : least significant byte → lowest address
+    
+3. What is stack?
+    - `LIFO` storage for local variable
+    - stack pointer sp
+    - PUSH AND POP
+4. Difference btw. func and goto
+    - with/ without return address
+    - Q:**calling convention? How to pass parameters?**
+5. How to call assembly function from c? How to call cpp function from assembly?
+6. Q What is the difference between "near", "far" and "huge" pointers?
+7. Briefly talk about 8086, 80386, x86?
+    
+    8086
+    
+    - 1MB address space
+    - 16 bit register
+    - segment address model
+    - A20 avoid address overflow
+    
+    80386 (32 bit)
+    
+    - 4GB address space
+    - segment address + paging
+    - add protection ring,  hardware multi tasking
+    
+    amd64 / x86-64 – 64-Bit AMD/Intel Arch
+    
+    - 64bit address space
+    - segment address not use any more, flat address space
+    - page base protection
+8. Memory address model? 
+    - 8086 segment address
+    - 80386 segment address + paging
+    - x86: Paging
+9. Effective address, linear address, physical address
+10. IA-32: Multitasking
+    - TSS for hardware support multitasking, store register content and segments
+    - Not used for multitasking in x86 anymore, only used for IO permission checking, keep the different prevelege level stack position for each task
+
+1. What is routine?
+    - Defination
+    - Basic Terminology
+    - **Asymmetric Continuation Model,** form a continuation hierarchy
+    - LIFO
+2. What is coroutine?
+    1. Defination
+    2. Terminology
+    3. **Symmetric Continuation Model,** form a continuation sequence. 
+    4. all coroutine ctrl flows are equitable
+3. Difference btw. routine and coroutine
+    1. 
+4. **Continuation,** Routine continuations,   **Coroutine continuations**
+5. What we need to store on the stack before thread swich
+6. What should be stored on stack for new Coroutine?
