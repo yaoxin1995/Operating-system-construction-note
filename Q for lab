@@ -1,0 +1,68 @@
+# Lab-Q&A
+
+# [Lab 1](https://os.inf.tu-dresden.de/Studium/OSC/SS2022/tasks/task1/)
+
+- How to do scolling when arrive at screen bottom?
+    - copy everthing 1 line up and clean up the last line and print stuff.
+
+# Lab 2
+
+- Goal : Protection of critical sections with the help of **hard synchronization**
+- What does the interrupt request process looks like in oostubs?
+    1. CPU enables interrupts
+    2. Device that wants to trigger interrupts is registered  into plugbox(IVT)
+    3. PIC forwards interrupts for the device to the CPU.
+    4. The processor jumps to the wrapper routine registered in the vector table. The wrapper routine then calls guardian, passing the number of the corresponding interrupt as a parameter
+    5. guarfian will with help of the interrupt number triggers corresponding method.
+
+# Lab 3
+
+- Goal : Protection of critical sections with the help of the **pro/epilogue model**
+- Questions:
+    - Why should diable interrupt at this [point](https://github.com/yaoxin1995/oostubs/blob/a6a4f7c957139bbb9be9ede9801ffa878392efe9/guard/guard.cc#L21)?
+        - hard synchronization while processing the queue for pending epilog.
+    - Why reenable [before epilogue?](https://github.com/yaoxin1995/oostubs/blob/a6a4f7c957139bbb9be9ede9801ffa878392efe9/guard/guard.cc#L29)
+        - Epilogue is on level 1/2, can be interrupted by ctrl flow on level 1.
+    - Why [epilog: enter()](https://github.com/yaoxin1995/oostubs/blob/shiyue-task3/guard/guard.cc#L42) should before cpu.enable_int().
+        - if we enable interrupt before enter, the epilogue is not protected by guard lock yet, at this time epilogue may be interrupted by control flow on L0.
+    - after leavng CS not need to [disable interrupt](https://github.com/yaoxin1995/oostubs/blob/shiyue-task3/guard/guard.cc#L46) again. cuz it direktly jump back to IH.
+    - [here](https://github.com/yaoxin1995/oostubs/blob/e5219977132e5d0795fe4e4a5597dfd57c30cee4/main.cc#L114) can be removed, because the use of the pro/epilogue model makes the protection of critical sections with the help of  `[CPU](https://os.inf.tu-dresden.de/Studium/OSC/SS2022/tasks/task3/classes/cpu.php)::disable_int()` and `[CPU](https://os.inf.tu-dresden.de/Studium/OSC/SS2022/tasks/task3/classes/cpu.php)::enable_int ()`mostly **redundant**, all corresponding calls should first be removed again.
+
+# Lab 4
+
+- Goal: Implementation of coroutine
+- [Scheduler::kill](https://github.com/yaoxin1995/oostubs/blob/6433e507db087fcf51c391aabd85db07b4cd018e/thread/scheduler.cc#L39)
+    - kill should also can kill the thread itself.
+- [main](https://github.com/yaoxin1995/oostubs/blob/6433e507db087fcf51c391aabd85db07b4cd018e/main.cc#L127)
+    - appl should also been put into ready list
+- ****[kickoff.cc](https://github.com/yaoxin1995/oostubs/blob/6433e507db087fcf51c391aabd85db07b4cd018e/thread/kickoff.cc#L29)****
+    - scheduler.exit() instead infinite loop
+
+# Lab 5
+
+- Goal:
+    - Protection of critical sections in the operating system with the help of the `[Guard](https://os.inf.tu-dresden.de/Studium/OSC/SS2022/tasks/task5/classes/guard.php)`
+    - Implementation of preemptive scheduling through timer interrupts
+- [Q:why not use resume in guarded_scheduler](https://github.com/yaoxin1995/oostubs/blob/4ed6723fb7c544563d7fcfc3fedf6b131de23825/device/watch.cc#L37)
+    - prevent double enter in critical section
+- [Q: how to convert 838ns into 1 microsec:](https://github.com/yaoxin1995/oostubs/blob/4ed6723fb7c544563d7fcfc3fedf6b131de23825/machine/pit.cc#L21)
+- Q: 如果将 `guard.enter();` 和 `watch.windup();` 交换会发生什么?
+    - if there is only 1 coroutine in the readylist, watch’s epilogue resume() will put currently life pointer(in our code ls life(0) ) into readylist, that will be problem.
+        - detail [see](https://github.com/yaoxin1995/oostubs/blob/4ed6723fb7c544563d7fcfc3fedf6b131de23825/main.cc#L130)
+    - using `enter()` to lock the critical section, so when the time timer interrupt occurs, the `epilogue()`method(`resume();`) may not be processed immediately. The accumulated epilogues are handled as soon as the critical section is released again.
+- [why we need `gaurd.enter()` before `scheduler.schedule();`](https://github.com/yaoxin1995/oostubs/blob/4ed6723fb7c544563d7fcfc3fedf6b131de23825/main.cc#L135)
+    - in main : schedule() doesn’t  have secure to be protected. so before we activate the first thread we need to use a guard lock
+- [Why we need to `leave()` at the very beginning of kickoff](https://github.com/yaoxin1995/oostubs/blob/4ed6723fb7c544563d7fcfc3fedf6b131de23825/thread/kickoff.cc#L29)
+    - kickoff is not directly called by any method, it actually was jumped in. so kickoff function is expcected to be called with gaurd locked.  before this thread is running we need to make sure to release the guard lock.
+
+# Lab 6
+
+- Goal: synchronization kernel object with the help with passiv waitting
+- [Q: Why not organizer.wakeup?](https://github.com/yaoxin1995/oostubs/blob/8e47c9874f8eba044bb504fa34fb0cc1977c15db/meeting/waitingroom.cc#L32)
+- [Q: Why define `wait()` and `signal()` as inline](https://github.com/yaoxin1995/oostubs/blob/8e47c9874f8eba044bb504fa34fb0cc1977c15db/meeting/semaphore.h#L38)
+    - ensure that the call to `wait()` and `signal()` does not cost more than to `p()` and `v()`
+- Q: how do implement this situation “If a buffer entry has to be overwritten without the old value having been fetched by an application process, the semaphore must therefore not be incremented.”
+    - Using a bool varialble [read_key](https://github.com/yaoxin1995/oostubs/blob/8e47c9874f8eba044bb504fa34fb0cc1977c15db/device/keyboard.cc#L50).
+- Q: what should we do when thread readylist is empty?
+    - halt cpu by using a [idle thread](https://github.com/yaoxin1995/oostubs/blob/cbfcbf47668412cd73a0c119524eb3bda7384af9/user/idle.cc#L24).
+    - note the adjustment in class  [scheduler](https://github.com/yaoxin1995/oostubs/blob/cbfcbf47668412cd73a0c119524eb3bda7384af9/thread/scheduler.cc#L29)
